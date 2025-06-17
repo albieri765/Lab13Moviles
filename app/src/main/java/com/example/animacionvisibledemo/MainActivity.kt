@@ -6,6 +6,9 @@ import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandIn
 import androidx.compose.animation.fadeIn
@@ -37,25 +40,39 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    CajaAnimadaConEstilo()
+                    CajaAnimadaConMovimiento()
                 }
             }
         }
     }
 }
-
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
-fun CajaAnimadaConEstilo() {
+fun CajaAnimadaConMovimiento() {
     var visible by remember { mutableStateOf(false) }
-    // Nuevo estado para controlar el cambio de color
     var isBlue by remember { mutableStateOf(true) }
+    // Nuevos estados para posición y tamaño
+    var isMoved by remember { mutableStateOf(false) }
 
-    // Animación del color
+    // Animaciones
     val animatedColor by animateColorAsState(
         targetValue = if (isBlue) Color.Blue else Color.Green,
-        animationSpec = tween(durationMillis = 1000) // Puedes cambiar a spring() para experimentar
-        // animationSpec = spring(stiffness = Spring.StiffnessLow)
+        animationSpec = tween(durationMillis = 1000)
+    )
+
+    val animatedSize by animateDpAsState(
+        targetValue = if (isMoved) 120.dp else 180.dp,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
+    )
+
+    val animatedOffsetX by animateDpAsState(
+        targetValue = if (isMoved) 100.dp else 0.dp,
+        animationSpec = spring(stiffness = Spring.StiffnessLow)
+    )
+
+    val animatedOffsetY by animateDpAsState(
+        targetValue = if (isMoved) (-50).dp else 0.dp,
+        animationSpec = spring(stiffness = Spring.StiffnessLow)
     )
 
     Column(
@@ -65,55 +82,37 @@ fun CajaAnimadaConEstilo() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Botón para mostrar/ocultar la caja
-        Button(
-            onClick = { visible = !visible },
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6200EA))
-        ) {
-            Text(
-                text = if (visible) "Ocultar Caja" else "Mostrar Caja",
-                fontSize = 18.sp,
-                color = Color.White
-            )
+        Button(onClick = { visible = !visible }) {
+            Text(if (visible) "Ocultar Caja" else "Mostrar Caja")
         }
 
-        // Nuevo botón para cambiar el color
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(onClick = { isBlue = !isBlue }) {
+            Text(if (isBlue) "Cambiar a Verde" else "Cambiar a Azul")
+        }
+
+        // Nuevo botón para mover y cambiar tamaño
         Spacer(modifier = Modifier.height(16.dp))
         Button(
-            onClick = { isBlue = !isBlue },
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF03DAC6))
+            onClick = { isMoved = !isMoved },
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF5722))
         ) {
-            Text(
-                text = if (isBlue) "Cambiar a Verde" else "Cambiar a Azul",
-                fontSize = 18.sp,
-                color = Color.Black
-            )
+            Text("Mover y Redimensionar")
         }
 
         Spacer(modifier = Modifier.height(32.dp))
 
         AnimatedVisibility(
             visible = visible,
-            enter = fadeIn(animationSpec = tween(500)) +
-                    slideInVertically(initialOffsetY = { -200 }, animationSpec = tween(500)) +
-                    scaleIn(initialScale = 0.3f, animationSpec = tween(500)) +
-                    expandIn(expandFrom = Alignment.Center, animationSpec = tween(500)),
-            exit = fadeOut(animationSpec = tween(500)) +
-                    slideOutVertically(targetOffsetY = { 200 }, animationSpec = tween(500)) +
-                    scaleOut(targetScale = 0.3f, animationSpec = tween(500)) +
-                    shrinkOut(shrinkTowards = Alignment.Center, animationSpec = tween(500))
+            enter = fadeIn() + slideInVertically() + scaleIn(),
+            exit = fadeOut() + slideOutVertically() + scaleOut()
         ) {
-            var rotation by remember { mutableStateOf(0f) }
-
-            LaunchedEffect(visible) {
-                if (visible) rotation = 360f else rotation = 0f
-            }
-
             Box(
                 modifier = Modifier
-                    .size(180.dp)
-                    .rotate(rotation)
-                    .background(animatedColor) // Usamos el color animado aquí
+                    .size(animatedSize) // Tamaño animado
+                    .offset(x = animatedOffsetX, y = animatedOffsetY) // Posición animada
+                    .background(animatedColor)
             )
         }
     }
