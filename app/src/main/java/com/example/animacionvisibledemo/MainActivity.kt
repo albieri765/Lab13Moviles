@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandIn
 import androidx.compose.animation.fadeIn
@@ -47,6 +48,15 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun CajaAnimadaConEstilo() {
     var visible by remember { mutableStateOf(false) }
+    // Nuevo estado para controlar el cambio de color
+    var isBlue by remember { mutableStateOf(true) }
+
+    // Animación del color
+    val animatedColor by animateColorAsState(
+        targetValue = if (isBlue) Color.Blue else Color.Green,
+        animationSpec = tween(durationMillis = 1000) // Puedes cambiar a spring() para experimentar
+        // animationSpec = spring(stiffness = Spring.StiffnessLow)
+    )
 
     Column(
         modifier = Modifier
@@ -55,6 +65,7 @@ fun CajaAnimadaConEstilo() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        // Botón para mostrar/ocultar la caja
         Button(
             onClick = { visible = !visible },
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6200EA))
@@ -63,6 +74,19 @@ fun CajaAnimadaConEstilo() {
                 text = if (visible) "Ocultar Caja" else "Mostrar Caja",
                 fontSize = 18.sp,
                 color = Color.White
+            )
+        }
+
+        // Nuevo botón para cambiar el color
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(
+            onClick = { isBlue = !isBlue },
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF03DAC6))
+        ) {
+            Text(
+                text = if (isBlue) "Cambiar a Verde" else "Cambiar a Azul",
+                fontSize = 18.sp,
+                color = Color.Black
             )
         }
 
@@ -81,7 +105,6 @@ fun CajaAnimadaConEstilo() {
         ) {
             var rotation by remember { mutableStateOf(0f) }
 
-            // Efecto de rotación adicional cuando aparece
             LaunchedEffect(visible) {
                 if (visible) rotation = 360f else rotation = 0f
             }
@@ -90,7 +113,7 @@ fun CajaAnimadaConEstilo() {
                 modifier = Modifier
                     .size(180.dp)
                     .rotate(rotation)
-                    .background(Color(0xFFE91E63))
+                    .background(animatedColor) // Usamos el color animado aquí
             )
         }
     }
