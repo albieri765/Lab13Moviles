@@ -3,6 +3,7 @@ package com.example.animacionvisibledemo
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.animateColorAsState
@@ -18,6 +19,7 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.with
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -40,7 +42,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    CajaAnimadaConMovimiento()
+                    CajaAnimadaConEstados()
                 }
             }
         }
@@ -48,31 +50,19 @@ class MainActivity : ComponentActivity() {
 }
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
-fun CajaAnimadaConMovimiento() {
-    var visible by remember { mutableStateOf(false) }
+fun CajaAnimadaConEstados() {
+    var visible by remember { mutableStateOf(true) } // Cambiado a true para que aparezca inicialmente
     var isBlue by remember { mutableStateOf(true) }
-    // Nuevos estados para posición y tamaño
-    var isMoved by remember { mutableStateOf(false) }
+    var estado by remember { mutableStateOf<EstadoContenido>(EstadoContenido.CONTENIDO) } // Estado inicial CONTENIDO
 
-    // Animaciones
+    // Animación del color
     val animatedColor by animateColorAsState(
-        targetValue = if (isBlue) Color.Blue else Color.Green,
-        animationSpec = tween(durationMillis = 1000)
-    )
-
-    val animatedSize by animateDpAsState(
-        targetValue = if (isMoved) 120.dp else 180.dp,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)
-    )
-
-    val animatedOffsetX by animateDpAsState(
-        targetValue = if (isMoved) 100.dp else 0.dp,
-        animationSpec = spring(stiffness = Spring.StiffnessLow)
-    )
-
-    val animatedOffsetY by animateDpAsState(
-        targetValue = if (isMoved) (-50).dp else 0.dp,
-        animationSpec = spring(stiffness = Spring.StiffnessLow)
+        targetValue = when(estado) {
+            EstadoContenido.CARGANDO -> Color.LightGray
+            EstadoContenido.CONTENIDO -> if(isBlue) Color.Blue else Color.Green
+            EstadoContenido.ERROR -> Color.Red
+        },
+        animationSpec = tween(durationMillis = 500)
     )
 
     Column(
@@ -82,8 +72,24 @@ fun CajaAnimadaConMovimiento() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
+        // Botón para mostrar/ocultar (AÑADIDO)
         Button(onClick = { visible = !visible }) {
-            Text(if (visible) "Ocultar Caja" else "Mostrar Caja")
+            Text(if (visible) "Ocultar Cuadro" else "Mostrar Cuadro")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Botones para controlar los estados
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { estado = EstadoContenido.CARGANDO }) {
+                Text("Cargando")
+            }
+            Button(onClick = { estado = EstadoContenido.CONTENIDO }) {
+                Text("Contenido")
+            }
+            Button(onClick = { estado = EstadoContenido.ERROR }) {
+                Text("Error")
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -92,28 +98,39 @@ fun CajaAnimadaConMovimiento() {
             Text(if (isBlue) "Cambiar a Verde" else "Cambiar a Azul")
         }
 
-        // Nuevo botón para mover y cambiar tamaño
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(
-            onClick = { isMoved = !isMoved },
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF5722))
-        ) {
-            Text("Mover y Redimensionar")
-        }
-
         Spacer(modifier = Modifier.height(32.dp))
 
         AnimatedVisibility(
             visible = visible,
-            enter = fadeIn() + slideInVertically() + scaleIn(),
-            exit = fadeOut() + slideOutVertically() + scaleOut()
+            enter = fadeIn() + slideInVertically(),
+            exit = fadeOut() + slideOutVertically()
         ) {
-            Box(
-                modifier = Modifier
-                    .size(animatedSize) // Tamaño animado
-                    .offset(x = animatedOffsetX, y = animatedOffsetY) // Posición animada
-                    .background(animatedColor)
-            )
+            AnimatedContent(
+                targetState = estado,
+                transitionSpec = {
+                    fadeIn(animationSpec = tween(300)) with
+                            fadeOut(animationSpec = tween(300))
+                }
+            ) { targetEstado ->
+                Box(
+                    modifier = Modifier
+                        .size(180.dp)
+                        .background(animatedColor),
+                    contentAlignment = Alignment.Center
+                ) {
+                    when(targetEstado) {
+                        EstadoContenido.CARGANDO -> CircularProgressIndicator(color = Color.White)
+                        EstadoContenido.CONTENIDO -> Text("Contenido", color = Color.White)
+                        EstadoContenido.ERROR -> Text("¡Error!", color = Color.White)
+                    }
+                }
+            }
         }
     }
+}
+
+sealed class EstadoContenido {
+    object CARGANDO : EstadoContenido()
+    object CONTENIDO : EstadoContenido()
+    object ERROR : EstadoContenido()
 }
